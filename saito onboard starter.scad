@@ -17,6 +17,7 @@ inner_key_depth = 4;
 
 gear_width = 20;
 main_gear_teeth = 48;
+main_gear_mod = 2;
 flange_inner = outer_bearing-outer_bearing_flange;
 flange_width = (gear_width-bearing_width)/2+1; //flange for the main gear
 
@@ -25,12 +26,22 @@ bearing_holder_depth = 2;
 
 bushing_holder_depth = 2;
 
+main_reducer_gear_teeth = 12;
+pinion_reducer_gear_teeth = 72-12;
+pinion_gear_mod = 1;
+pinion_gear_teeth = 12;
+
 
 echo("----- Outputs -------");
+main_to_reducer = main_gear_teeth/main_reducer_gear_teeth;
+reducer_to_pinion = pinion_reducer_gear_teeth/pinion_gear_teeth;
+echo("main ",main_gear_teeth, "t, main reducer ",main_reducer_gear_teeth,"t, pinion reducer",pinion_reducer_gear_teeth,"t, pinion",pinion_gear_teeth,"t");
+echo("gearing",main_to_reducer,"*",reducer_to_pinion," = ",main_to_reducer * reducer_to_pinion, "orig ~17");
 difference () {
     union () {
         motor();
-        onboardStarter();
+        main_gear_assembly();
+        reduction_gear_assembly();
     }
     *translate([-50,0,-50])
         cube([100,100,100]);
@@ -56,8 +67,29 @@ module motor() {
     }
 }
 
-module onboardStarter() {
-    explode_dim = 25;
+module reduction_gear_assembly() {
+    main_gear_diameter = (main_gear_teeth+2)*main_gear_mod;
+    main_reduction_gear_diameter = (main_reducer_gear_teeth+2)*main_gear_mod;
+    
+    translate([main_gear_diameter/2 + main_reduction_gear_diameter/2 - main_gear_mod*2,0,-11])
+    rotate([0,0,15]) {
+        reduction_gear();
+    }
+}
+
+module reduction_gear() {
+    translate([0,0,10])
+        spur_gear(main_gear_mod, main_reducer_gear_teeth, 20, 10, optimized = false);
+    spur_gear(pinion_gear_mod, pinion_reducer_gear_teeth, 10, 10, optimized = false);
+
+}
+
+
+
+
+
+module main_gear_assembly() {
+    explode_dim = 0;//25;
     
     translate([0,0,explode_dim * 2])
     color ("blue") {
@@ -101,7 +133,7 @@ module onboardStarter() {
 
 module main_gear() {
         difference() {
-        spur_gear(2, main_gear_teeth, 20, flange_inner, optimized = false);
+        spur_gear(main_gear_mod, main_gear_teeth, 20, flange_inner, optimized = false);
         baring_key();
         translate([0,0,flange_width]) {
             cylinder(d=outer_bearing, h=gear_width);
