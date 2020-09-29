@@ -16,7 +16,7 @@ inner_key_width = 6;
 inner_key_depth = 4;
 
 gear_width = 20;
-main_gear_teeth = 48;
+main_gear_teeth = 48-4;
 main_gear_mod = 2;
 flange_inner = outer_bearing-outer_bearing_flange;
 flange_width = (gear_width-bearing_width)/2+1; //flange for the main gear
@@ -27,21 +27,25 @@ bearing_holder_depth = 2;
 bushing_holder_depth = 2;
 
 main_reducer_gear_teeth = 12;
-pinion_reducer_gear_teeth = 72-12;
+pinion_reducer_gear_teeth = 72-12-4;
 pinion_gear_mod = 1;
-pinion_gear_teeth = 12;
+pinion_gear_teeth = 12-2;
 
 
 echo("----- Outputs -------");
 main_to_reducer = main_gear_teeth/main_reducer_gear_teeth;
 reducer_to_pinion = pinion_reducer_gear_teeth/pinion_gear_teeth;
+
 echo("main ",main_gear_teeth, "t, main reducer ",main_reducer_gear_teeth,"t, pinion reducer",pinion_reducer_gear_teeth,"t, pinion",pinion_gear_teeth,"t");
 echo("gearing",main_to_reducer,"*",reducer_to_pinion," = ",main_to_reducer * reducer_to_pinion, "orig ~17");
+echo("Motor KV",1200/17 * main_to_reducer * reducer_to_pinion);
+
 difference () {
     union () {
-        motor();
+        %motor();
         main_gear_assembly();
         reduction_gear_assembly();
+        starter_motor_assembly();
     }
     *translate([-50,0,-50])
         cube([100,100,100]);
@@ -67,11 +71,43 @@ module motor() {
     }
 }
 
+module starter_motor_assembly() {
+    main_gear_diameter = (main_gear_teeth+2)*main_gear_mod;
+    main_reduction_gear_diameter = (main_reducer_gear_teeth+2)*main_gear_mod;
+
+    pinion_reducer_gear_diameter = (pinion_reducer_gear_teeth+2)*pinion_gear_mod;
+    pinion_gear_diameter = (pinion_gear_teeth+2)*pinion_gear_mod;
+    
+        translate([main_gear_diameter/2 + main_reduction_gear_diameter/2 - main_gear_mod*2,0,-11]) {
+            rotate([0,0,-100]) {
+                translate([pinion_reducer_gear_diameter/2 + pinion_gear_diameter/2 - pinion_gear_mod*2,0,-14]) {
+                    rotate([0,0,23]) {
+                        color("teal")
+                            motor_and_pinion();
+                    }
+            }
+        }
+    }
+}
+
+module motor_and_pinion() {
+    starter_diameter = 35;
+    starter_length = 35;
+    
+    spur_gear(pinion_gear_mod, pinion_gear_teeth, 18, 5, optimized = false);
+    cylinder(d=5, h=15);
+    
+    translate([0,0,-starter_length]) {
+        cylinder(d=starter_diameter, h=starter_length);
+    }
+}
+reduction_gear_top = 13;
+
 module reduction_gear_assembly() {
     main_gear_diameter = (main_gear_teeth+2)*main_gear_mod;
     main_reduction_gear_diameter = (main_reducer_gear_teeth+2)*main_gear_mod;
     
-    translate([main_gear_diameter/2 + main_reduction_gear_diameter/2 - main_gear_mod*2,0,-11])
+    translate([main_gear_diameter/2 + main_reduction_gear_diameter/2 - main_gear_mod*2,0,reduction_gear_top-30])
     rotate([0,0,15]) {
         reduction_gear();
     }
@@ -106,7 +142,7 @@ module main_gear_assembly() {
     translate([0,0,explode_dim * 3])
     color ("red") {
         translate ([0,0,flange_width]) {
-            bearing([6.5, 6.5], [20, 47], [1.5, 1], bearing_width);
+            bearing([4*2, 4*2], [20, 47], [2, 1], bearing_width);
         }
     }
     
@@ -205,12 +241,16 @@ module bearing_holder_bolts() {
 }
 
 module baring_key() {
+    echo("Baring Key Length:",gear_width-bearing_holder_depth)
+    
     translate([47/2-1.5,-2,0]) {
-        cube([4,4,gear_width-bearing_holder_depth]);
+        cube([3,3,gear_width-bearing_holder_depth]);
     }
 }
 
 module bushing_key() {
+    echo("Bushing Key:",inner_key_width, " x ", inner_key_depth, " x ", gear_width - flange_width)
+    
     translate([motor_shaft+inner_bearing_key_depth-inner_key_depth,0,flange_width]) {
         rotate([90,0,90]) {
             milledKey_singleside(inner_key_width,inner_key_depth,gear_width - flange_width);
@@ -252,7 +292,7 @@ module bearing(bearing_surface, diameter, key_depth, bearing_width) {
     inner_key = key_depth[0];
     outer_key = key_depth[1];
     inner_key_width = 6;
-    outer_key_width = 4;
+    outer_key_width = 3;
 
     //outer ring
     linear_extrude(height = bearing_width) {
