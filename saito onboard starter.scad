@@ -160,6 +160,7 @@ module main_gear_assembly() {
     color ("green") {
         bearing_holder();
     }
+
     translate([0,0,explode_dim * 5])
     color ("green") {
         bushing_holder();
@@ -168,7 +169,20 @@ module main_gear_assembly() {
 }
 
 module main_gear() {
-        difference() {
+    main_gear_inner = 10;
+    intersection() {
+        base_main_gear();
+        union() {
+            translate([0,0,2]) 
+            cylinder (d=bearing_holder_d, h=gear_width);
+            translate([0,0,5]) 
+            cylinder (d=100, h=main_gear_inner);
+        }
+    }
+}
+
+module base_main_gear() {
+    difference() {
         spur_gear(main_gear_mod, main_gear_teeth, 20, flange_inner, optimized = false);
         baring_key();
         translate([0,0,flange_width]) {
